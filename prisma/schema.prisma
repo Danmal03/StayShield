@@ -1,0 +1,384 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemRole {
+  SYSTEM_OWNER
+  SECURITY_ADMINISTRATOR
+  SECURITY_ANALYST
+  NETWORK_ADMINISTRATOR
+  IT_SUPPORT
+  AUDITOR
+  DATA_PROTECTION_OFFICER
+  HOTEL_MANAGEMENT
+  READ_ONLY_EXECUTIVE
+}
+
+model Tenant {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  name                String
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  properties          Property[]
+  users               User[]
+  assignments         RoleAssignment[]
+  invitations         Invitation[]
+  auditLogs           AuditLog[]
+  devices             NetworkDevice[]
+  events              SecurityEvent[]
+  policies            SecurityPolicy[]
+  incidents           Incident[]
+  departments         Department[]
+  staffProfiles       StaffSecurityProfile[]
+  personalDevices     PersonalDevice[]
+  staffRequests       StaffRequest[]
+  announcements       SecurityAnnouncement[]
+  trainingCourses     SecurityTrainingCourse[]
+  trainingAssignments TrainingAssignment[]
+  notifications       StaffNotification[]
+  securityScores      EmployeeSecurityScore[]
+}
+
+model Property {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  name      String
+  timezone  String   @default("Africa/Lusaka")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model User {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  tenantId            String                   @db.Uuid
+  email               String                   @unique
+  displayName         String
+  passwordHash        String
+  isActive            Boolean                  @default(true)
+  emailVerifiedAt     DateTime?
+  failedLoginAttempts Int                      @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roleAssignments     RoleAssignment[]
+  sessions            Session[]
+  auditLogs           AuditLog[]
+  staffProfile        StaffSecurityProfile?
+  personalDevices     PersonalDevice[]         @relation("EmployeeDevices")
+  reviewedDevices     PersonalDevice[]         @relation("DeviceReviewer")
+  staffRequests       StaffRequest[]           @relation("RequestOwner")
+  assignedRequests    StaffRequest[]           @relation("RequestAssignee")
+  announcements       SecurityAnnouncement[]   @relation("AnnouncementAuthor")
+  trainingAssignments TrainingAssignment[]     @relation("TrainingAssignee")
+  assignedTraining    TrainingAssignment[]     @relation("TrainingAssigner")
+  trainingCompletions TrainingCompletion[]
+  notifications       StaffNotification[]
+  securityScores      EmployeeSecurityScore[]
+  reportedIncidents   Incident[]               @relation("IncidentReporter")
+  createdCourses      SecurityTrainingCourse[] @relation("TrainingCourseAuthor")
+
+  @@index([tenantId, isActive])
+}
+
+model RoleAssignment {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  tenantId  String     @db.Uuid
+  role      SystemRole
+  createdAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, role])
+  @@index([tenantId, role])
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model Invitation {
+  id          String     @id @default(uuid()) @db.Uuid
+  tenantId    String     @db.Uuid
+  email       String
+  displayName String
+  role        SystemRole
+  tokenHash   String     @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, email, expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String?  @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  targetType String?
+  targetId   String?
+  sourceIp   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+model NetworkDevice {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  name       String
+  category   String
+  location   String
+  ipAddress  String
+  status     String
+  lastSeenAt DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+}
+
+model SecurityEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  title       String
+  description String   @default("")
+  source      String
+  severity    String
+  status      String
+  occurredAt  DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+}
+
+model SecurityPolicy {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @db.Uuid
+  name     String
+  summary  String
+  status   String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+}
+
+model Incident {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @db.Uuid
+  title          String
+  summary        String
+  severity       String
+  status         String
+  openedAt       DateTime @default(now())
+  reporterUserId String?  @db.Uuid
+  reportCategory String?
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reporter       User?    @relation("IncidentReporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, openedAt])
+  @@index([tenantId, reporterUserId, openedAt])
+}
+
+model Department {
+  id            String                 @id @default(uuid()) @db.Uuid
+  tenantId      String                 @db.Uuid
+  name          String
+  description   String                 @default("")
+  permissions   String[]               @default([])
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profiles      StaffSecurityProfile[]
+  announcements SecurityAnnouncement[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isActive])
+}
+
+model StaffSecurityProfile {
+  id                      String      @id @default(uuid()) @db.Uuid
+  tenantId                String      @db.Uuid
+  userId                  String      @unique @db.Uuid
+  departmentId            String?     @db.Uuid
+  jobTitle                String?
+  notificationPreferences Json?
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+  tenant                  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department              Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, departmentId])
+}
+
+model PersonalDevice {
+  id                       String    @id @default(uuid()) @db.Uuid
+  tenantId                 String    @db.Uuid
+  userId                   String    @db.Uuid
+  name                     String
+  deviceType               String
+  operatingSystem          String
+  status                   String    @default("pending")
+  connectionStatus         String    @default("unknown")
+  endpointProtectionStatus String    @default("unknown")
+  encryptionStatus         String    @default("unknown")
+  complianceStatus         String    @default("pending")
+  assignedIp               String?
+  networkSegment           String?
+  reviewedById             String?   @db.Uuid
+  reviewedAt               DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  tenant                   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                     User      @relation("EmployeeDevices", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy               User?     @relation("DeviceReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, userId, status])
+}
+
+model StaffRequest {
+  id              String              @id @default(uuid()) @db.Uuid
+  tenantId        String              @db.Uuid
+  userId          String              @db.Uuid
+  category        String
+  description     String
+  website         String?
+  websiteCategory String?
+  temporaryUntil  DateTime?
+  status          String              @default("pending")
+  assignedAdminId String?             @db.Uuid
+  adminResponse   String?
+  resolvedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User                @relation("RequestOwner", fields: [userId], references: [id], onDelete: Cascade)
+  assignedAdmin   User?               @relation("RequestAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+  notifications   StaffNotification[]
+
+  @@index([tenantId, userId, createdAt])
+  @@index([tenantId, status, createdAt])
+}
+
+model SecurityAnnouncement {
+  id                   String      @id @default(uuid()) @db.Uuid
+  tenantId             String      @db.Uuid
+  title                String
+  body                 String
+  audienceDepartmentId String?     @db.Uuid
+  isActive             Boolean     @default(true)
+  createdById          String?     @db.Uuid
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  tenant               Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  audienceDepartment   Department? @relation(fields: [audienceDepartmentId], references: [id], onDelete: SetNull)
+  createdBy            User?       @relation("AnnouncementAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, isActive, createdAt])
+}
+
+model SecurityTrainingCourse {
+  id           String               @id @default(uuid()) @db.Uuid
+  tenantId     String               @db.Uuid
+  title        String
+  summary      String
+  content      String
+  questions    Json
+  passingScore Int                  @default(80)
+  isPublished  Boolean              @default(false)
+  createdById  String?              @db.Uuid
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy    User?                @relation("TrainingCourseAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  assignments  TrainingAssignment[]
+
+  @@index([tenantId, isPublished])
+}
+
+model TrainingAssignment {
+  id           String                 @id @default(uuid()) @db.Uuid
+  tenantId     String                 @db.Uuid
+  userId       String                 @db.Uuid
+  courseId     String                 @db.Uuid
+  assignedById String?                @db.Uuid
+  dueAt        DateTime?
+  createdAt    DateTime               @default(now())
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User                   @relation("TrainingAssignee", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy   User?                  @relation("TrainingAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  course       SecurityTrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  completion   TrainingCompletion?
+
+  @@unique([userId, courseId])
+  @@index([tenantId, userId, dueAt])
+}
+
+model TrainingCompletion {
+  id           String             @id @default(uuid()) @db.Uuid
+  assignmentId String             @unique @db.Uuid
+  userId       String             @db.Uuid
+  score        Int
+  passed       Boolean
+  completedAt  DateTime           @default(now())
+  assignment   TrainingAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+}
+
+model StaffNotification {
+  id        String        @id @default(uuid()) @db.Uuid
+  tenantId  String        @db.Uuid
+  userId    String        @db.Uuid
+  requestId String?       @db.Uuid
+  category  String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime      @default(now())
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  request   StaffRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, userId, readAt, createdAt])
+}
+
+model EmployeeSecurityScore {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  userId       String   @db.Uuid
+  score        Int
+  breakdown    Json
+  calculatedAt DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, calculatedAt])
+}

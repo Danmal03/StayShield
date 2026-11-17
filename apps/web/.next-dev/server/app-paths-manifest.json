@@ -1,0 +1,7 @@
+{
+  "/(auth)/auth/login/page": "app/(auth)/auth/login/page.js",
+  "/(console)/app/policies/page": "app/(console)/app/policies/page.js",
+  "/(console)/app/incidents/page": "app/(console)/app/incidents/page.js",
+  "/(console)/app/admin/page": "app/(console)/app/admin/page.js",
+  "/(console)/app/dashboard/page": "app/(console)/app/dashboard/page.js"
+}
