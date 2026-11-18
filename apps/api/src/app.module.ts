@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
 import { RolesGuard } from './auth/roles.guard';
 import { HealthModule } from './health/health.module';
+import { NetworkMonitoringModule } from './network-monitoring/network-monitoring.module';
 import { OperationsModule } from './operations/operations.module';
 import { PrismaModule } from './prisma.module';
 import { StaffModule } from './staff/staff.module';
@@ -15,6 +16,7 @@ import { StaffPortalModule } from './staff-portal/staff-portal.module';
   imports: [
     AuthModule,
     HealthModule,
+    NetworkMonitoringModule,
     OperationsModule,
     PrismaModule,
     StaffModule,

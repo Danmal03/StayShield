@@ -10,6 +10,7 @@ import {
   StaffTrainingAssignment,
 } from '../../lib/types';
 import { useConsoleContext } from '../console-provider';
+import { StaffNetworkPanel } from './staff-network-panel';
 
 export type StaffPortalSection =
   | 'devices'
@@ -22,6 +23,7 @@ export type StaffPortalSection =
   | 'training';
 
 type OwnSession = { id: string; createdAt: string; expiresAt: string; current: boolean };
+type OwnLoginEvent = { id: string; action: string; sourceIp: string | null; createdAt: string };
 
 const requestCategories = [
   ['device_registration', 'Device registration'],
@@ -52,6 +54,7 @@ export function StaffPortalWorkspace({ section }: { section: StaffPortalSection 
   const { reloadSession } = useConsoleContext();
   const [data, setData] = useState<StaffPortalOverview | null>(null);
   const [sessions, setSessions] = useState<OwnSession[]>([]);
+  const [loginEvents, setLoginEvents] = useState<OwnLoginEvent[]>([]);
   const [reports, setReports] = useState<PersonalSecurityReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,12 +68,14 @@ export function StaffPortalWorkspace({ section }: { section: StaffPortalSection 
       const overview = await apiJson<StaffPortalOverview>('/staff-portal/overview');
       setData(overview);
       if (section === 'account' || section === 'security') {
-        const [ownSessions, ownReports] = await Promise.all([
+        const [ownSessions, ownReports, ownLoginEvents] = await Promise.all([
           section === 'account' ? apiJson<OwnSession[]>('/staff-portal/sessions') : Promise.resolve([]),
           section === 'security' ? apiJson<PersonalSecurityReport[]>('/staff-portal/reports') : Promise.resolve([]),
+          section === 'account' ? apiJson<OwnLoginEvent[]>('/staff-portal/login-history') : Promise.resolve([]),
         ]);
         if (section === 'account') {
           setSessions(ownSessions);
+          setLoginEvents(ownLoginEvents);
         }
         if (section === 'security') setReports(ownReports);
       }
@@ -180,6 +185,7 @@ export function StaffPortalWorkspace({ section }: { section: StaffPortalSection 
         <AccountSection
           data={data}
           sessions={sessions}
+          loginEvents={loginEvents}
           saving={saving}
           setSaving={setSaving}
           setError={setError}
@@ -228,11 +234,12 @@ function DevicesSection({
         <div className="panel-heading"><div><p className="eyebrow">YOUR DEVICES</p><h2>Registered devices</h2></div><span className="muted">{data.devices.length} shown</span></div>
         {data.devices.length ? (
           <div className="table-scroll"><table className="operations-table">
-            <thead><tr><th>Device</th><th>Connection</th><th>Protection</th><th>Encryption</th><th>Compliance</th><th>Registration</th></tr></thead>
+            <thead><tr><th>Device</th><th>Connection</th><th>Assigned IP</th><th>Network segment</th><th>Protection</th><th>Encryption</th><th>Compliance</th><th>Registration</th></tr></thead>
             <tbody>{data.devices.map((device) => (
               <tr key={device.id}>
                 <td><strong>{device.name}</strong><small>{device.deviceType} · {device.operatingSystem}</small></td>
-                <td>{displayStatus(device.connectionStatus)}</td><td>{displayStatus(device.endpointProtectionStatus)}</td>
+                <td>{displayStatus(device.connectionStatus)}</td><td>{device.assignedIp ?? 'Not available'}</td>
+                <td>{device.networkSegment ?? 'Not available'}</td><td>{displayStatus(device.endpointProtectionStatus)}</td>
                 <td>{displayStatus(device.encryptionStatus)}</td><td>{displayStatus(device.complianceStatus)}</td>
                 <td><span className={`status-badge status-${statusClass(device.status)}`}>{displayStatus(device.status)}</span></td>
               </tr>
@@ -266,10 +273,7 @@ function LostDeviceForm({ saving, submit }: { saving: boolean; submit: (event: F
 function ActivitySection({ data }: { data: StaffPortalOverview }) {
   return (
     <>
-      <section className="content-panel">
-        <div className="panel-heading"><div><p className="eyebrow">NETWORK CONNECTION</p><h2>Your current connection</h2></div></div>
-        <div className="integration-notice"><strong>Network integration not connected</strong><p>StayShield cannot currently retrieve your assigned IP address, network segment, connection status, or blocked-access activity. No network activity is being simulated.</p></div>
-      </section>
+      <StaffNetworkPanel />
       <section className="content-panel">
         <div className="panel-heading"><div><p className="eyebrow">PRIVATE ACCOUNT SCOPE</p><h2>Your recent security activity</h2></div></div>
         {data.recentActivity.length ? <ul className="portal-list">{data.recentActivity.map((item) => (
@@ -303,17 +307,23 @@ function WebAccessSection({
             category: 'website_access',
             website: form.get('website'),
             websiteCategory: form.get('websiteCategory'),
-            temporaryUntil: form.get('temporaryUntil') || undefined,
-            description: form.get('description'),
+            temporaryUntil: new Date(String(form.get('temporaryUntil'))).toISOString(),
+            description: [
+              `Business justification: ${form.get('businessJustification')}`,
+              `Reason for access: ${form.get('accessReason')}`,
+              form.get('comments') ? `Additional comments: ${form.get('comments')}` : '',
+            ].filter(Boolean).join('\n'),
           }, 'Website access request sent for administrator review. It will not change filtering without an integration.');
         }}>
           <h3>Request website access</h3>
           <div className="field-grid">
             <label>Website<input name="website" type="url" required maxLength={253} placeholder="https://example.com" /></label>
             <label>Category<select name="websiteCategory"><option value="">Not sure</option><option>Work</option><option>Research</option><option>Training</option><option>Other</option></select></label>
-            <label>Temporary access until<input name="temporaryUntil" type="datetime-local" /></label>
+            <label>Access needed until<input name="temporaryUntil" type="datetime-local" required /></label>
           </div>
-          <label>Business reason<textarea name="description" required minLength={5} maxLength={2000} rows={3} /></label>
+          <label>Business justification<textarea name="businessJustification" required minLength={5} maxLength={1000} rows={2} /></label>
+          <label>Why do you need access to this website?<textarea name="accessReason" required minLength={5} maxLength={1000} rows={2} /></label>
+          <label>Additional comments (optional)<textarea name="comments" maxLength={1000} rows={2} /></label>
           <div className="form-actions"><button className="button primary" disabled={saving} type="submit">{saving ? 'Submitting…' : 'Submit access request'}</button></div>
         </form>}
       </section>
@@ -535,6 +545,7 @@ function TrainingSection({
 function AccountSection({
   data,
   sessions,
+  loginEvents,
   saving,
   setSaving,
   setError,
@@ -544,6 +555,7 @@ function AccountSection({
 }: {
   data: StaffPortalOverview;
   sessions: OwnSession[];
+  loginEvents: OwnLoginEvent[];
   saving: boolean;
   setSaving: (value: boolean) => void;
   setError: (message: string) => void;
@@ -617,6 +629,17 @@ function AccountSection({
             <td>{session.current ? 'Current' : <button className="button secondary" onClick={() => void onRevokeSession(session.id)} type="button">Sign out</button>}</td>
           </tr>)}</tbody>
         </table></div> : <p className="empty-state">No active sessions.</p>}
+      </section>
+      <section className="content-panel">
+        <div className="panel-heading"><div><p className="eyebrow">ACCOUNT ACTIVITY</p><h2>Recent login history</h2></div></div>
+        {loginEvents.length ? <div className="table-scroll"><table className="operations-table">
+          <thead><tr><th>Activity</th><th>Date and time</th><th>Source IP</th></tr></thead>
+          <tbody>{loginEvents.map((event) => <tr key={event.id}>
+            <td>{displayStatus(event.action.replace('auth.', ''))}</td>
+            <td>{new Date(event.createdAt).toLocaleString()}</td>
+            <td>{event.sourceIp ?? 'Not available'}</td>
+          </tr>)}</tbody>
+        </table></div> : <p className="empty-state">No login history is available for your account.</p>}
       </section>
     </>
   );

@@ -133,6 +133,41 @@ export type StaffNotification = {
   createdAt: string;
 };
 
+export type NetworkConnection = {
+  id: string;
+  source: string;
+  connectionType: string;
+  ssid: string | null;
+  carrierName: string | null;
+  ipAddress: string | null;
+  networkSegment: string | null;
+  accessPoint: string | null;
+  securityStatus: string;
+  status: string;
+  verificationStatus: string;
+  connectedAt: string | null;
+  disconnectedAt: string | null;
+  lastSeenAt: string;
+};
+
+export type CurrentNetworkConnection = {
+  status: 'connected' | 'disconnected' | 'unverified' | 'not_configured';
+  connection: NetworkConnection | null;
+  updatedAt: string | null;
+};
+
+export type NetworkIntegrationStatus = {
+  status: 'available' | 'unverified' | 'not_configured';
+  configured: boolean;
+  sources: string[];
+  lastEventAt: string | null;
+  freshnessSeconds: number;
+};
+
+export type NetworkConnectionHistoryItem = NetworkConnection & {
+  status: 'connected' | 'disconnected' | 'unverified';
+};
+
 export type PersonalSecurityReport = {
   id: string;
   title: string;
@@ -191,6 +226,8 @@ export type StaffPortalOverview = {
     endpointProtectionStatus: string;
     encryptionStatus: string;
     complianceStatus: string;
+    assignedIp?: string | null;
+    networkSegment?: string | null;
     createdAt: string;
   }>;
   requests: StaffRequest[];
@@ -198,7 +235,6 @@ export type StaffPortalOverview = {
   notifications: StaffNotification[];
   announcements: Array<{ id: string; title: string; body: string; createdAt: string }>;
   securityScore: { score: number; calculatedAt: string } | null;
-  network: { providerConnected: boolean; connectionStatus: string; assignedIp: string | null; networkSegment: string | null };
   webAccess: { providerConnected: boolean; policyStatus: string; message: string };
   recentActivity: Array<{ id: string; title: string; category: string; status: string; occurredAt: string }>;
 };

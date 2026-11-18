@@ -170,12 +170,6 @@ export class StaffPortalService {
       securityScore: score
         ? { score: score.score, breakdown: score.breakdown, calculatedAt: score.calculatedAt }
         : null,
-      network: {
-        providerConnected: false,
-        connectionStatus: 'not_connected',
-        assignedIp: null,
-        networkSegment: null,
-      },
       webAccess: {
         providerConnected: false,
         policyStatus: 'not_connected',

@@ -1,5 +1,6 @@
 import { ConsolePage } from '../../../../components/console-provider';
 import { NetworkDevicesPage } from '../../../../components/operations/network-devices';
+import { NetworkMonitoringAdmin } from '../../../../components/operations/network-monitoring-admin';
 import { StaffAccountsPage } from '../../../../components/operations/staff-accounts';
 import { StaffPortalAdmin } from '../../../../components/operations/staff-portal-admin';
 
@@ -9,6 +10,7 @@ export default function AdminPage() {
       <nav className="admin-section-nav" aria-label="Administration sections">
         <a href="#staff-accounts">Staff accounts</a>
         <a href="#device-inventory">Network inventory</a>
+        <a href="#network-monitoring">Network monitoring</a>
         <a href="#employee-requests">Employee requests</a>
         <a href="#device-approvals">Device registrations</a>
         <a href="#employee-portal">Employee portal</a>
@@ -18,6 +20,9 @@ export default function AdminPage() {
       </section>
       <section id="device-inventory" className="admin-section">
         <NetworkDevicesPage />
+      </section>
+      <section id="network-monitoring" className="admin-section">
+        <NetworkMonitoringAdmin />
       </section>
       <section id="employee-portal" className="admin-section">
         <StaffPortalAdmin />

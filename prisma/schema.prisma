@@ -42,6 +42,8 @@ model Tenant {
   trainingAssignments TrainingAssignment[]
   notifications       StaffNotification[]
   securityScores      EmployeeSecurityScore[]
+  networkIntegrations NetworkIntegration[]
+  networkConnections NetworkConnectionSession[]
 }
 
 model Property {
@@ -86,6 +88,8 @@ model User {
   securityScores      EmployeeSecurityScore[]
   reportedIncidents   Incident[]               @relation("IncidentReporter")
   createdCourses      SecurityTrainingCourse[] @relation("TrainingCourseAuthor")
+  networkConnections  NetworkConnectionSession[] @relation("NetworkConnectionEmployee")
+  createdNetworkIntegrations NetworkIntegration[] @relation("NetworkIntegrationCreator")
 
   @@index([tenantId, isActive])
 }
@@ -258,6 +262,7 @@ model PersonalDevice {
   tenant                   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user                     User      @relation("EmployeeDevices", fields: [userId], references: [id], onDelete: Cascade)
   reviewedBy               User?     @relation("DeviceReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  networkConnections       NetworkConnectionSession[]
 
   @@index([tenantId, userId, status])
 }
@@ -381,4 +386,55 @@ model EmployeeSecurityScore {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId, calculatedAt])
+}
+
+model NetworkIntegration {
+  id            String                    @id @default(uuid()) @db.Uuid
+  tenantId      String                    @db.Uuid
+  name          String
+  source        String
+  tokenHash     String                    @unique
+  isEnabled     Boolean                   @default(true)
+  lastEventAt   DateTime?
+  createdById   String?                   @db.Uuid
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy     User?                     @relation("NetworkIntegrationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  connections   NetworkConnectionSession[]
+
+  @@index([tenantId, isEnabled, source])
+}
+
+model NetworkConnectionSession {
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @db.Uuid
+  employeeId         String?            @db.Uuid
+  deviceId           String?            @db.Uuid
+  integrationId      String?            @db.Uuid
+  source             String
+  sourceSessionId    String
+  connectionType     String
+  ssid               String?
+  carrierName        String?
+  ipAddress          String?
+  networkSegment     String?
+  accessPoint        String?
+  securityStatus     String             @default("not_available")
+  status             String
+  verificationStatus String
+  connectedAt        DateTime?
+  disconnectedAt     DateTime?
+  lastSeenAt          DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee           User?              @relation("NetworkConnectionEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  device             PersonalDevice?    @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  integration        NetworkIntegration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, employeeId, status, lastSeenAt])
+  @@index([tenantId, deviceId, status, lastSeenAt])
+  @@index([tenantId, integrationId, sourceSessionId, lastSeenAt])
+  @@index([tenantId, status, lastSeenAt])
 }

@@ -6,85 +6,25 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/(auth)/auth/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(auth)/auth/login/page.js"
-    ],
     "/(console)/app/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(console)/app/layout.js"
     ],
-    "/(console)/app/admin/page": [
+    "/(console)/app/network/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/admin/page.js"
+      "static/chunks/app/(console)/app/network/page.js"
     ],
-    "/(console)/app/audit/page": [
+    "/(auth)/auth/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/audit/page.js"
-    ],
-    "/(console)/app/incidents/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/incidents/page.js"
-    ],
-    "/(console)/app/events/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/events/page.js"
+      "static/chunks/app/(auth)/auth/login/page.js"
     ],
     "/(console)/app/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(console)/app/dashboard/page.js"
-    ],
-    "/(console)/app/devices/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/devices/page.js"
-    ],
-    "/(console)/app/activity/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/activity/page.js"
-    ],
-    "/(console)/app/web-access/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/web-access/page.js"
-    ],
-    "/(console)/app/security-centre/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/security-centre/page.js"
-    ],
-    "/(console)/app/training/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/training/page.js"
-    ],
-    "/(console)/app/requests/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/requests/page.js"
-    ],
-    "/(console)/app/notifications/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/notifications/page.js"
-    ],
-    "/(console)/app/account/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/account/page.js"
-    ],
-    "/(console)/app/policies/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(console)/app/policies/page.js"
     ]
   }
 }

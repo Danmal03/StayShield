@@ -12,9 +12,9 @@ import {
 import { useRouter } from 'next/navigation';
 import { ApiError, apiJson, apiRequest } from '../lib/operations-api';
 import { Account, Workspace } from '../lib/types';
-import { isAdmin, roleLabel } from '../lib/roles';
+import { isAdmin } from '../lib/roles';
 import { ConsoleShell } from './console-shell';
-import { NotificationBell } from './staff-portal/notification-bell';
+import { StaffPortalShell } from './staff-portal/staff-portal-shell';
 
 type ConsoleContextValue = {
   user: Account | null;
@@ -109,22 +109,26 @@ export function ConsolePage({
   eyebrow,
   title,
   adminOnly = false,
+  networkAdminOnly = false,
   children,
 }: {
   active: string;
   eyebrow: string;
   title: string;
   adminOnly?: boolean;
+  networkAdminOnly?: boolean;
   children: ReactNode;
 }) {
   const { user, workspace, loading, error, reloadWorkspace, reloadSession, logout } =
     useConsoleContext();
   const router = useRouter();
   const admin = Boolean(user && isAdmin(user.roles));
+  const networkAdmin = Boolean(user?.roles.includes('NETWORK_ADMINISTRATOR'));
 
   useEffect(() => {
     if (adminOnly && user && !admin) router.replace('/app/dashboard');
-  }, [admin, adminOnly, router, user]);
+    if (networkAdminOnly && user && !admin && !networkAdmin) router.replace('/app/dashboard');
+  }, [admin, adminOnly, networkAdmin, networkAdminOnly, router, user]);
 
   if (loading && !user) {
     return <main className="console-loading"><p className="notice">Loading your secure workspace…</p></main>;
@@ -137,11 +141,11 @@ export function ConsolePage({
       </main>
     );
   }
-  if (adminOnly && !admin) {
+  if ((adminOnly && !admin) || (networkAdminOnly && !admin && !networkAdmin)) {
     return <main className="console-loading"><p className="notice">Redirecting to your dashboard…</p></main>;
   }
 
-  if (admin) {
+  if (admin || (networkAdminOnly && networkAdmin)) {
     return (
       <ConsoleShell
         user={user}
@@ -163,40 +167,14 @@ export function ConsolePage({
   }
 
   return (
-    <main className="staff-shell">
-      <header className="staff-topbar">
-        <a className="brand" href="/">StayShield</a>
-        <div className="staff-account">
-          <span>{user.displayName}<small>{user.roles.map(roleLabel).join(', ')}</small></span>
-          <NotificationBell />
-          <button className="button secondary" onClick={logout} type="button">Sign out</button>
+    <StaffPortalShell user={user} active={active} title={title} onLogout={() => void logout()}>
+      {error && (
+        <div className="notice notice-error" role="alert">
+          <span>{error}</span>
+          <button className="button secondary" onClick={() => void reloadWorkspace()} type="button">Retry</button>
         </div>
-      </header>
-      <section className="staff-main">
-        <nav className="staff-portal-nav" aria-label="Employee portal">
-          {[
-            ['/app/dashboard', 'Overview'],
-            ['/app/devices', 'My devices'],
-            ['/app/web-access', 'Web access'],
-            ['/app/security-centre', 'Security centre'],
-            ['/app/training', 'Training'],
-            ['/app/requests', 'Requests & support'],
-            ['/app/account', 'My account'],
-          ].map(([href, label]) => (
-            <a key={href} href={href} aria-current={active === href ? 'page' : undefined}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        <div className="staff-page-heading"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1></div>
-        {error && (
-          <div className="notice notice-error" role="alert">
-            <span>{error}</span>
-            <button className="button secondary" onClick={() => void reloadWorkspace()} type="button">Retry</button>
-          </div>
-        )}
-        {children}
-      </section>
-    </main>
+      )}
+      {children}
+    </StaffPortalShell>
   );
 }
